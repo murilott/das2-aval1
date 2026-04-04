@@ -24,19 +24,19 @@ C4Container
         Container(appinsights, "Application Insights", "Monitoramento", "Logs, alertas e rastreamento das execuções")
     }
 
-    Rel(usuarios, plataforma, "Utiliza")
-    Rel(plataforma, erp, "Envia pedidos/vendas para")
-    Rel(erp, plataforma, "Fornece dados de estoque e preços para")
+    Rel(usuarios, plataforma, "Utiliza [HTTPS]")
+    Rel(plataforma, erp, "Envia pedidos/vendas via HTTPS para")
+    Rel(erp, plataforma, "Fornece dados de estoque e preços via HTTPS para")
 
-    Rel(erp, fn_ingestao, "Fornece dados via API/query")
-    Rel(fn_ingestao, blob, "Deposita arquivos brutos em")
-    Rel(blob, fn_transform, "Fornece arquivos raw para")
-    Rel(fn_transform, sql, "Persiste dados tratados em")
-    Rel(sql, powerbi, "Fornece dados analíticos para")
-    Rel(powerbi, plataforma, "Fornece visualizações para")
+    Rel(erp, fn_ingestao, "Fornece dados via API/HTTPS")
+    Rel(fn_ingestao, blob, "Deposita arquivos brutos em [HTTPS]")
+    Rel(blob, fn_transform, "Fornece arquivos raw para [HTTPS]")
+    Rel(fn_transform, sql, "Persiste dados tratados em [TDS/ODBC]")
+    Rel(sql, powerbi, "Fornece dados analíticos para [ODBC/HTTPS]")
+    Rel(powerbi, plataforma, "Fornece visualizações para [HTTPS]")
 
-    Rel(keyvault, fn_ingestao, "Fornece credenciais para", $tags="infra")
-    Rel(keyvault, fn_transform, "Fornece credenciais para", $tags="infra")
-    Rel(fn_ingestao, appinsights, "Envia logs e métricas para", $tags="infra")
-    Rel(fn_transform, appinsights, "Envia logs e métricas para", $tags="infra")
+    Rel(keyvault, fn_ingestao, "Fornece credenciais para [HTTPS]", $tags="infra")
+    Rel(keyvault, fn_transform, "Fornece credenciais para [HTTPS]", $tags="infra")
+    Rel(fn_ingestao, appinsights, "Envia logs e métricas para [HTTPS]", $tags="infra")
+    Rel(fn_transform, appinsights, "Envia logs e métricas para [HTTPS]", $tags="infra")
 ```
