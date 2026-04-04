@@ -14,3 +14,6 @@ Contém os documentos C4 e ADR do ERP Venda Mais.
 
 - docs/adr: documentos para decisões arquiteturais (ADR)
 - docs/c4: documentos C4 Context e Container
+
+Para visualizar os diagramas C4, baixe a extensão Markdown Preview Mermaid Support, ou similar, 
+e abra o arquivo para visualização
