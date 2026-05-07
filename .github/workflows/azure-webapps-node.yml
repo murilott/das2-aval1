@@ -2,7 +2,7 @@ name: Deploy Python Function App (Flex)
 
 on:
   push:
-    branches: ["timerffunc"]
+    branches: ["main"]
 
 permissions:
   id-token: write
