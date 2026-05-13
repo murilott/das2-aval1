@@ -1,5 +1,6 @@
 import azure.functions as func
 import logging
+import os
 #from orchestrators.etl_orchestrator import ETLOrchestrator
 
 app = func.Blueprint()
@@ -7,11 +8,9 @@ app = func.Blueprint()
 
 @app.timer_trigger(schedule="0 0 6 * * *", arg_name="timer", run_on_startup=False)
 def extract_cliente(timer: func.TimerRequest) -> None:
-    """
-    Trigger de extração agendada (diária às 06:00 UTC).
-    Apenas delega para o orchestrator — sem lógica de negócio aqui.
-    """
-    logging.info("extract_cliente iniciado.")
-    #orchestrator = ETLOrchestrator()
-    #orchestrator.run_extraction()
-    logging.info("extract_cliente finalizado.")
+    sql_server = os.getenv("SQL_SERVER_SOURCE")
+    database = os.getenv("SQL_DATABASE_SOURCE")
+    user = os.getenv("SQL_USER_SOURCE")
+    password = os.getenv("SQL_PASSWORD_SOURCE")
+    
+    logging.info(f"servidor {sql_server}, banco: {database}, usuário: {user}, senha: {password}")
