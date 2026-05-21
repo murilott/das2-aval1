@@ -34,7 +34,7 @@ def extract_cliente(timer: func.TimerRequest) -> None:
             # Cria um cursor para executar a consulta   
             cursor = conn.cursor()
             
-            query = "select * from erp.cliente"
+            query = "select top 5 * from erp.cliente"
 
             # Executa a consulta SQL
             cursor.execute(query)
