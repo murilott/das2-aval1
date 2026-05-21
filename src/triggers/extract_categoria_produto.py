@@ -1,6 +1,8 @@
 import azure.functions as func
 import logging
 import os
+import pyodbc
+import pyodbc
 #from orchestrators.etl_orchestrator import ETLOrchestrator
 
 app = func.Blueprint()
