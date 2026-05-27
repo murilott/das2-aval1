@@ -2,6 +2,8 @@ import azure.functions as func
 import logging
 import os
 import pyodbc
+import time
+
 #from orchestrators.etl_orchestrator import ETLOrchestrator
 
 app = func.Blueprint()
@@ -14,7 +16,7 @@ def extract_cliente(timer: func.TimerRequest) -> None:
     user = os.getenv("SQL_USER_SOURCE")
     password = os.getenv("SQL_PASSWORD_SOURCE")
     
-    logging.info(f"servidor {sql_server}, banco: {database}, usuário: {user}, senha: {password}")
+    logging.info(f"Iniciando | Servidor {sql_server}, banco: {database}, usuário: {user}, senha: {password}")
     
     # Configura a string de conexão para o banco de dados SQL Server
     conn_str = (
@@ -29,6 +31,10 @@ def extract_cliente(timer: func.TimerRequest) -> None:
     )
     
     try:
+        
+        logging.info("Iniciando medição...")
+        
+        inicio = time.perf_counter()
         # Estabelece a conexão com o banco de dados usando pyodbc
         with pyodbc.connect(conn_str) as conn:
             # Cria um cursor para executar a consulta   
@@ -42,7 +48,10 @@ def extract_cliente(timer: func.TimerRequest) -> None:
             # Busca todos os resultados da consulta
             rows = cursor.fetchall()
 
-            logging.info(rows)           
+        fim = time.perf_counter()
+        duracao = (fim - inicio) * 1000
+        
+        logging.info(f"terminando medição. Tempo de execução: {duracao}")
 
     except Exception as e:
         logging.error(f"Erro ao ler erp.cliente: {str(e)}")
