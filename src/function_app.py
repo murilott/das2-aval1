@@ -17,6 +17,7 @@ from triggers.extract_regiao import app as extract_regiao
 from triggers.extract_representante import app as extract_representante
 from triggers.extract_titulo_receber import app as extract_titulo_receber
 from triggers.extract_transportadora import app as extract_transportadora
+from triggers.poc_teste_cliente import app as poc_teste_cliente
 
 # registrar e rodar functions
 app.register_functions(extract_cliente)
@@ -31,3 +32,4 @@ app.register_functions(extract_regiao)
 app.register_functions(extract_representante)
 app.register_functions(extract_titulo_receber)
 app.register_functions(extract_transportadora)
+app.register_functions(poc_teste_cliente)
