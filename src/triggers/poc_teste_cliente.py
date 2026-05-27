@@ -42,7 +42,7 @@ def poc_teste_cliente(timer: func.TimerRequest) -> None:
         inicio = time.perf_counter()
         # Estabelece a conexão com o banco de dados usando pyodbc
         with engine.connect() as conn:
-            query = "select top 5 * from erp.cliente"
+            query = text("select top 5 * from erp.cliente")
 
             # Executa a consulta SQL
             result = conn.execute(query)
