@@ -54,10 +54,10 @@ def poc_teste_cliente(timer: func.TimerRequest) -> None:
             for row in rows:
                 logging.info(f"Entrega extraído: {row}")
 
-        fim = time.perf_counter()
-        duracao = (fim - inicio) * 1000
-        
-        logging.info(f"terminando medição. Tempo de execução: {duracao:.2f} ms")
+            fim = time.perf_counter()
+            duracao = (fim - inicio) * 1000
+            
+            logging.info(f"terminando medição. Tempo de execução: {duracao:.2f} ms")
 
     except Exception as e:
         logging.error(f"Erro ao ler erp.entrega: {str(e)}")
