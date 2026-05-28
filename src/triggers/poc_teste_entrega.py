@@ -42,7 +42,7 @@ def poc_teste_cliente(timer: func.TimerRequest) -> None:
         inicio = time.perf_counter()
         # Estabelece a conexão com o banco de dados usando pyodbc
         with engine.connect() as conn:
-            query = text("select top 5 * from erp.cliente")
+            query = text("select * from erp.entrega")
 
             # Executa a consulta SQL
             result = conn.execute(query)
@@ -52,7 +52,7 @@ def poc_teste_cliente(timer: func.TimerRequest) -> None:
             
             # Exibe no log de forma estruturada
             for row in rows:
-                logging.info(f"Cliente extraído: {row}")
+                logging.info(f"Entrega extraído: {row}")
 
         fim = time.perf_counter()
         duracao = (fim - inicio) * 1000
@@ -60,5 +60,5 @@ def poc_teste_cliente(timer: func.TimerRequest) -> None:
         logging.info(f"terminando medição. Tempo de execução: {duracao:.2f} ms")
 
     except Exception as e:
-        logging.error(f"Erro ao ler erp.cliente: {str(e)}")
+        logging.error(f"Erro ao ler erp.entrega: {str(e)}")
         raise

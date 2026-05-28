@@ -31,10 +31,6 @@ def extract_cliente(timer: func.TimerRequest) -> None:
     )
     
     try:
-        
-        logging.info("Iniciando medição com PyODBC...")
-        
-        inicio = time.perf_counter()
         # Estabelece a conexão com o banco de dados usando pyodbc
         with pyodbc.connect(conn_str) as conn:
             # Cria um cursor para executar a consulta   
@@ -47,11 +43,6 @@ def extract_cliente(timer: func.TimerRequest) -> None:
 
             # Busca todos os resultados da consulta
             rows = cursor.fetchall()
-
-        fim = time.perf_counter()
-        duracao = (fim - inicio) * 1000
-        
-        logging.info(f"terminando medição. Tempo de execução: {duracao:.2f} ms")
 
     except Exception as e:
         logging.error(f"Erro ao ler erp.cliente: {str(e)}")
