@@ -1,49 +1,46 @@
 import azure.functions as func
 import logging
-import os
 import pyodbc
-#from orchestrators.etl_orchestrator import ETLOrchestrator
+
+from utils.db_helper import get_source_conn_str, get_dest_conn_str
+from utils.merger import merge_to_dbo
 
 app = func.Blueprint()
+
+# Colunas esperadas na origem: cd_regiao, nm_regiao, sg_uf, nm_cidade, fl_ativo
+MERGE_SQL = """
+MERGE dbo.regiao AS dest
+USING #src AS src ON dest.cd_regiao = src.cd_regiao
+WHEN MATCHED THEN UPDATE SET
+    nm_regiao         = src.nm_regiao,
+    sg_uf             = src.sg_uf,
+    nm_cidade         = src.nm_cidade,
+    fl_ativo          = CAST(src.fl_ativo AS bit),
+    dt_atualizacao    = SYSUTCDATETIME(),
+    nm_sistema_origem = 'VendaMais_ERP'
+WHEN NOT MATCHED THEN INSERT
+    (cd_regiao, nm_regiao, sg_uf, nm_cidade, fl_ativo, nm_sistema_origem, cd_registro_origem)
+VALUES
+    (src.cd_regiao, src.nm_regiao, src.sg_uf, src.nm_cidade,
+     CAST(src.fl_ativo AS bit), 'VendaMais_ERP', src.cd_regiao);
+"""
 
 
 @app.timer_trigger(schedule="0 0 6 * * *", arg_name="timer", run_on_startup=False)
 def extract_regiao(timer: func.TimerRequest) -> None:
-    sql_server = os.getenv("SQL_SERVER_SOURCE")
-    database = os.getenv("SQL_DATABASE_SOURCE")
-    user = os.getenv("SQL_USER_SOURCE")
-    password = os.getenv("SQL_PASSWORD_SOURCE")
-    
-    logging.info(f"servidor {sql_server}, banco: {database}, usuário: {user}, senha: {password}")
+    logging.info("Iniciando extração: erp.regiao")
 
-    # Configura a string de conexão para o banco de dados SQL Server
-    conn_str = (
-        "DRIVER={ODBC Driver 18 for SQL Server};"
-        f"SERVER={sql_server};"
-        f"DATABASE={database};"
-        f"UID={user};"
-        f"PWD={password};"
-        "Encrypt=yes;"
-        "TrustServerCertificate=no;"
-        "Connection Timeout=30;"
-    )
-    
     try:
-        # Estabelece a conexão com o banco de dados usando pyodbc
-        with pyodbc.connect(conn_str) as conn:
-            # Cria um cursor para executar a consulta   
+        with pyodbc.connect(get_source_conn_str()) as conn:
             cursor = conn.cursor()
-            
-            query = "select top 5 * from erp.regiao"
-
-            # Executa a consulta SQL
-            cursor.execute(query)
-
-            # Busca todos os resultados da consulta
+            cursor.execute("SELECT * FROM erp.regiao")
+            columns = [col[0] for col in cursor.description]
             rows = cursor.fetchall()
 
-            logging.info(rows)           
+        logging.info(f"Extraídos {len(rows)} registros | colunas: {columns}")
+
+        merge_to_dbo(get_dest_conn_str(), columns, rows, MERGE_SQL)
 
     except Exception as e:
-        logging.error(f"Erro ao ler erp.cliente: {str(e)}")
+        logging.error(f"Erro ao processar erp.regiao: {str(e)}")
         raise

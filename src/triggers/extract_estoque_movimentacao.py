@@ -1,50 +1,49 @@
 import azure.functions as func
 import logging
-import os
 import pyodbc
 
-#from orchestrators.etl_orchestrator import ETLOrchestrator
+from utils.db_helper import get_source_conn_str, get_dest_conn_str
+from utils.merger import delete_insert_dbo
 
 app = func.Blueprint()
+
+# Colunas esperadas na origem:
+#   cd_sku, dt_movimentacao, ds_tipo_movimentacao, qt_movimentacao,
+#   nr_documento_origem, nr_pedido, ds_observacao
+INSERT_SQL = """
+INSERT INTO dbo.estoque_movimentacao
+    (id_produto, dt_movimentacao, ds_tipo_movimentacao, qt_movimentacao,
+     nr_documento_origem, id_pedido, ds_observacao, nm_sistema_origem)
+SELECT
+    (SELECT id_produto FROM dbo.produto WHERE cd_sku = src.cd_sku),
+    TRY_CAST(src.dt_movimentacao AS datetime2(0)),
+    src.ds_tipo_movimentacao,
+    TRY_CAST(src.qt_movimentacao AS decimal(18,4)),
+    src.nr_documento_origem,
+    (SELECT id_pedido FROM dbo.pedido WHERE nr_pedido = src.nr_pedido),
+    src.ds_observacao,
+    'VendaMais_ERP'
+FROM #src AS src
+WHERE (SELECT id_produto FROM dbo.produto WHERE cd_sku = src.cd_sku) IS NOT NULL;
+"""
 
 
 @app.timer_trigger(schedule="0 0 6 * * *", arg_name="timer", run_on_startup=False)
 def extract_estoque_movimentacao(timer: func.TimerRequest) -> None:
-    sql_server = os.getenv("SQL_SERVER_SOURCE")
-    database = os.getenv("SQL_DATABASE_SOURCE")
-    user = os.getenv("SQL_USER_SOURCE")
-    password = os.getenv("SQL_PASSWORD_SOURCE")
-    
-    logging.info(f"servidor {sql_server}, banco: {database}, usuário: {user}, senha: {password}")
+    logging.info("Iniciando extração: erp.estoque_movimentacao")
 
-    # Configura a string de conexão para o banco de dados SQL Server
-    conn_str = (
-        "DRIVER={ODBC Driver 18 for SQL Server};"
-        f"SERVER={sql_server};"
-        f"DATABASE={database};"
-        f"UID={user};"
-        f"PWD={password};"
-        "Encrypt=yes;"
-        "TrustServerCertificate=no;"
-        "Connection Timeout=30;"
-    )
-    
     try:
-        # Estabelece a conexão com o banco de dados usando pyodbc
-        with pyodbc.connect(conn_str) as conn:
-            # Cria um cursor para executar a consulta   
+        with pyodbc.connect(get_source_conn_str()) as conn:
             cursor = conn.cursor()
-            
-            query = "select top 5 * from erp.estoque_movimentacao"
-
-            # Executa a consulta SQL
-            cursor.execute(query)
-
-            # Busca todos os resultados da consulta
+            cursor.execute("SELECT * FROM erp.estoque_movimentacao")
+            columns = [col[0] for col in cursor.description]
             rows = cursor.fetchall()
 
-            logging.info(rows)           
+        logging.info(f"Extraídos {len(rows)} registros | colunas: {columns}")
+
+        delete_insert_dbo(get_dest_conn_str(), columns, rows,
+                          "dbo.estoque_movimentacao", INSERT_SQL)
 
     except Exception as e:
-        logging.error(f"Erro ao ler erp.cliente: {str(e)}")
+        logging.error(f"Erro ao processar erp.estoque_movimentacao: {str(e)}")
         raise

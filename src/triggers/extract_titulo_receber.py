@@ -1,49 +1,66 @@
 import azure.functions as func
 import logging
-import os
 import pyodbc
-#from orchestrators.etl_orchestrator import ETLOrchestrator
+
+from utils.db_helper import get_source_conn_str, get_dest_conn_str
+from utils.merger import merge_to_dbo
 
 app = func.Blueprint()
+
+# Colunas esperadas na origem:
+#   nr_titulo, cd_cliente, nr_pedido,
+#   dt_emissao, dt_vencimento, dt_pagamento,
+#   vl_titulo, vl_recebido, ds_status_titulo
+MERGE_SQL = """
+MERGE dbo.titulo_receber AS dest
+USING #src AS src ON dest.nr_titulo = src.nr_titulo
+WHEN MATCHED THEN UPDATE SET
+    id_cliente        = (SELECT id_cliente FROM dbo.cliente
+                         WHERE cd_cliente = src.cd_cliente),
+    id_pedido         = (SELECT id_pedido FROM dbo.pedido
+                         WHERE nr_pedido = src.nr_pedido),
+    dt_emissao        = TRY_CAST(src.dt_emissao AS datetime2(0)),
+    dt_vencimento     = TRY_CAST(src.dt_vencimento AS datetime2(0)),
+    dt_pagamento      = TRY_CAST(src.dt_pagamento AS datetime2(0)),
+    vl_titulo         = TRY_CAST(src.vl_titulo AS decimal(18,2)),
+    vl_recebido       = TRY_CAST(src.vl_recebido AS decimal(18,2)),
+    ds_status_titulo  = src.ds_status_titulo,
+    dt_atualizacao    = SYSUTCDATETIME(),
+    nm_sistema_origem = 'VendaMais_ERP'
+WHEN NOT MATCHED THEN INSERT
+    (nr_titulo, id_cliente, id_pedido,
+     dt_emissao, dt_vencimento, dt_pagamento,
+     vl_titulo, vl_recebido, ds_status_titulo,
+     nm_sistema_origem, cd_registro_origem)
+VALUES
+    (src.nr_titulo,
+     (SELECT id_cliente FROM dbo.cliente WHERE cd_cliente = src.cd_cliente),
+     (SELECT id_pedido FROM dbo.pedido WHERE nr_pedido = src.nr_pedido),
+     TRY_CAST(src.dt_emissao AS datetime2(0)),
+     TRY_CAST(src.dt_vencimento AS datetime2(0)),
+     TRY_CAST(src.dt_pagamento AS datetime2(0)),
+     TRY_CAST(src.vl_titulo AS decimal(18,2)),
+     TRY_CAST(src.vl_recebido AS decimal(18,2)),
+     src.ds_status_titulo,
+     'VendaMais_ERP', src.nr_titulo);
+"""
 
 
 @app.timer_trigger(schedule="0 0 6 * * *", arg_name="timer", run_on_startup=False)
 def extract_titulo_receber(timer: func.TimerRequest) -> None:
-    sql_server = os.getenv("SQL_SERVER_SOURCE")
-    database = os.getenv("SQL_DATABASE_SOURCE")
-    user = os.getenv("SQL_USER_SOURCE")
-    password = os.getenv("SQL_PASSWORD_SOURCE")
-    
-    logging.info(f"servidor {sql_server}, banco: {database}, usuário: {user}, senha: {password}")
+    logging.info("Iniciando extração: erp.titulo_receber")
 
-    # Configura a string de conexão para o banco de dados SQL Server
-    conn_str = (
-        "DRIVER={ODBC Driver 18 for SQL Server};"
-        f"SERVER={sql_server};"
-        f"DATABASE={database};"
-        f"UID={user};"
-        f"PWD={password};"
-        "Encrypt=yes;"
-        "TrustServerCertificate=no;"
-        "Connection Timeout=30;"
-    )
-    
     try:
-        # Estabelece a conexão com o banco de dados usando pyodbc
-        with pyodbc.connect(conn_str) as conn:
-            # Cria um cursor para executar a consulta   
+        with pyodbc.connect(get_source_conn_str()) as conn:
             cursor = conn.cursor()
-            
-            query = "select top 5 * from erp.titulo_receber"
-
-            # Executa a consulta SQL
-            cursor.execute(query)
-
-            # Busca todos os resultados da consulta
+            cursor.execute("SELECT * FROM erp.titulo_receber")
+            columns = [col[0] for col in cursor.description]
             rows = cursor.fetchall()
 
-            logging.info(rows)           
+        logging.info(f"Extraídos {len(rows)} registros | colunas: {columns}")
+
+        merge_to_dbo(get_dest_conn_str(), columns, rows, MERGE_SQL)
 
     except Exception as e:
-        logging.error(f"Erro ao ler erp.cliente: {str(e)}")
+        logging.error(f"Erro ao processar erp.titulo_receber: {str(e)}")
         raise
